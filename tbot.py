@@ -39,20 +39,21 @@ You can control me by sending these commands:
 @bot.message_handler(commands=['verify'])
 def get_verified(message):
     """/verify."""
-    if message.chat.id not in _dict.keys():
-        _dict[message.chat.id] = {}
-        _dict[message.chat.id]["id"] = 0
-    bot.send_chat_action(message.chat.id, 'typing')
+    chat_id = message.chat.id
+    if chat_id not in _dict.keys():
+        _dict[chat_id] = {}
+        _dict[chat_id]["id"] = 0
+    bot.send_chat_action(chat_id, 'typing')
     result = session.query(Data).filter(
-        Data.verified == 0, Data.index > _dict[message.chat.id]["id"]).first()
+        Data.verified == 0, Data.index > _dict[chat_id]["id"]).first()
     text = "Is *%s* a correct translation of *%s*" % (result.translation,
                                                       result.name)
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
     markup.add('Correct', 'Wrong')
-    _dict[message.chat.id]["verify"] = result.osm_id
-    _dict[message.chat.id]["id"] = result.index
+    _dict[chat_id]["verify"] = result.osm_id
+    _dict[chat_id]["id"] = result.index
     msg = bot.send_message(
-        message.chat.id, text, reply_markup=markup, parse_mode='markdown')
+        chat_id, text, reply_markup=markup, parse_mode='markdown')
     bot.register_next_step_handler(msg, commit_verify)
 
 
@@ -69,22 +70,23 @@ def commit_verify(message):
 @bot.message_handler(commands=['translate'])
 def get_translate(message):
     """/translate."""
-    if message.chat.id not in _dict.keys():
-        _dict[message.chat.id] = {}
-        _dict[message.chat.id]["id"] = 0
-    bot.send_chat_action(message.chat.id, 'typing')
+    chat_id = message.chat.id
+    if chat_id not in _dict.keys():
+        _dict[chat_id] = {}
+        _dict[chat_id]["id"] = 0
+    bot.send_chat_action(chat_id, 'typing')
     result = session.query(Data).filter(
-        Data.verified == 0, Data.index > _dict[message.chat.id]["id"]).first()
-    text = "Translation for *%s*\nIf not sure please reply `skip`" % result.name
-    _dict[message.chat.id]["translate"] = result.osm_id
-    _dict[message.chat.id]["id"] = result.index
-    msg = bot.send_message(message.chat.id, text, parse_mode='markdown')
+        Data.verified == 0, Data.index > _dict[chat_id]["id"]).first()
+    text = "Translation for *%s*\nIf not sure please reply /skip" % result.name
+    _dict[chat_id]["translate"] = result.osm_id
+    _dict[chat_id]["id"] = result.index
+    msg = bot.send_message(chat_id, text, parse_mode='markdown')
     bot.register_next_step_handler(msg, commit_translate)
 
 
 def commit_translate(message):
     """Commit to DB."""
-    if message.text.lower() != 'skip':
+    if message.text.lower() != '/skip':
         id = _dict[message.chat.id]["translate"]
         row = session.query(Data).filter_by(osm_id=id).first()
         row.translation = message.text
