@@ -1,0 +1,3 @@
+token: 'YOUR_BOT_TOKEN'
+input_csv: '/PATH/TO/YOUR/INPUT/INPUT.CSV'
+db_name: 'NAME_FOR_DB_TO_BE_GENERATED'
