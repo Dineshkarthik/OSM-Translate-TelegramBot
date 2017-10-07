@@ -1,13 +1,20 @@
 """TelegramBot for OSM translation."""
+import os
+import yaml
 import telebot
 from telebot import types
 from sqlalchemy import *
 from sqlalchemy.orm import *
 from sqlalchemy.ext.declarative import *
 
-bot = telebot.TeleBot("TOKEN")
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+f = open(os.path.join(THIS_DIR, 'config.yaml'))
+config = yaml.safe_load(f)
+f.close()
+
+bot = telebot.TeleBot(config["token"])
 db = create_engine(
-    "sqlite:///OSM_Tamil_translation_TN.db?check_same_thread=False",
+    "sqlite:///" + config["db_name"] + ".db?check_same_thread=False",
     echo=False)
 Base = declarative_base()
 Base.metadata.reflect(db)
@@ -59,12 +66,13 @@ def get_verified(message):
 
 def commit_verify(message):
     """Commit to DB."""
-    if message.text == 'Correct':
-        id = _dict[message.chat.id]["verify"]
-        row = session.query(Data).filter_by(osm_id=id).first()
-        row.verified = 1
-        session.commit()
-    get_verified(message)
+    if message.text.lower() != '/translate':
+        if message.text == 'Correct':
+            id = _dict[message.chat.id]["verify"]
+            row = session.query(Data).filter_by(osm_id=id).first()
+            row.verified = 1
+            session.commit()
+        get_verified(message)
 
 
 @bot.message_handler(commands=['translate'])
@@ -86,12 +94,13 @@ def get_translate(message):
 
 def commit_translate(message):
     """Commit to DB."""
-    if message.text.lower() != '/skip':
-        id = _dict[message.chat.id]["translate"]
-        row = session.query(Data).filter_by(osm_id=id).first()
-        row.translation = message.text
-        session.commit()
-    get_translate(message)
+    if message.text.lower() != '/verify':
+        if message.text.lower() != '/skip':
+            id = _dict[message.chat.id]["translate"]
+            row = session.query(Data).filter_by(osm_id=id).first()
+            row.translation = message.text
+            session.commit()
+        get_translate(message)
 
 
 bot.polling(none_stop=True)
