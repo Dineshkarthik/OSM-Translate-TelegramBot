@@ -51,8 +51,9 @@ def get_verified(message):
         _dict[chat_id] = {}
         _dict[chat_id]["id"] = 0
     bot.send_chat_action(chat_id, 'typing')
-    result = session.query(Data).filter(
-        Data.verified == 0, Data.index > _dict[chat_id]["id"]).first()
+    result = session.query(Data).filter(Data.verified == 0,
+                                        Data.index > _dict[chat_id]["id"],
+                                        Data.translation != None).first()
     text = "Is *%s* a correct translation of *%s*" % (result.translation,
                                                       result.name)
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
