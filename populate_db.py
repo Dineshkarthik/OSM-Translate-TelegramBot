@@ -13,5 +13,6 @@ f.close()
 df = pd.read_csv(config["input_csv"])
 df["verified"] = 0
 df.index = df.index + 1
+df.loc[df.name == df.translation, 'translation'] = None
 db = create_engine("sqlite:///" + config["db_name"] + ".db", echo=False)
 df.to_sql("translation", db, if_exists="append")
