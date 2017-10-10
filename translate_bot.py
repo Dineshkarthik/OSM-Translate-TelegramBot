@@ -51,7 +51,7 @@ def get_verified(message):
         _dict[chat_id] = {}
         _dict[chat_id]["id"] = 0
     bot.send_chat_action(chat_id, 'typing')
-    result = session.query(Data).filter(Data.verified == 0,
+    result = session.query(Data).filter(Data.verified < 3,
                                         Data.index > _dict[chat_id]["id"],
                                         Data.translation != None).first()
     text = "Is *%s* a correct translation of *%s*" % (result.translation,
@@ -71,7 +71,12 @@ def commit_verify(message):
         if message.text == 'Correct':
             id = _dict[message.chat.id]["verify"]
             row = session.query(Data).filter_by(osm_id=id).first()
-            row.verified = 1
+            row.verified += 1
+            session.commit()
+        elif message.text == 'Wrong':
+            id = _dict[message.chat.id]["verify"]
+            row = session.query(Data).filter_by(osm_id=id).first()
+            row.verified -= 1 if row.verified != 0 else 0
             session.commit()
         get_verified(message)
 
