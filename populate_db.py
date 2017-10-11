@@ -30,19 +30,29 @@ db = create_engine(
     encoding='utf-8',
     echo=False)
 
+existing_tables = db.execute("SHOW TABLES;")
+existing_tables = [d[0] for d in existing_tables]
+
 df = pd.read_csv(config["input_csv"])
 df["verified"] = 0
 df.index = df.index + 1
 df["translator_id"] = 0
 df.loc[df.name == df.translation, 'translation'] = None
+if 'translation' in existing_tables:
+    max_index = pd.read_sql_query('select max(`index`) from translation',
+                                  db).max()
+    df.index = df.index + max_index[0]
+    print("Updating table translation")
+else:
+    print("Creating table translation")
 df.to_sql("translation", db, if_exists="append")
-print("Created table translation")
 
-user_df = pd.DataFrame(columns=[
-    'user_id', 'osm_username', 'tlg_username', 'first_name', 'last_name',
-    'translate', 'verify', 'verify_count', 't_index'
-])
-int_columns = ["user_id", "translate", "verify", "verify_count", "t_index"]
-user_df[int_columns] = user_df[int_columns].astype(int)
-user_df.to_sql("users", db, if_exists="fail", index=False)
-print("Created table users")
+if 'users' not in existing_tables:
+    user_df = pd.DataFrame(columns=[
+        'user_id', 'osm_username', 'tlg_username', 'first_name', 'last_name',
+        'translate', 'verify', 'verify_count', 't_index'
+    ])
+    int_columns = ["user_id", "translate", "verify", "verify_count", "t_index"]
+    user_df[int_columns] = user_df[int_columns].astype(int)
+    user_df.to_sql("users", db, if_exists="fail", index=False)
+    print("Created table users")
