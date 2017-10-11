@@ -33,13 +33,16 @@ db = create_engine(
 df = pd.read_csv(config["input_csv"])
 df["verified"] = 0
 df.index = df.index + 1
+df["translator_id"] = 0
 df.loc[df.name == df.translation, 'translation'] = None
 df.to_sql("translation", db, if_exists="append")
 print("Created table translation")
 
 user_df = pd.DataFrame(columns=[
     'user_id', 'osm_username', 'tlg_username', 'first_name', 'last_name',
-    'translate', 'verify', 'verify_count'
+    'translate', 'verify', 'verify_count', 't_index'
 ])
+int_columns = ["user_id", "translate", "verify", "verify_count", "t_index"]
+user_df[int_columns] = user_df[int_columns].astype(int)
 user_df.to_sql("users", db, if_exists="fail", index=False)
 print("Created table users")
