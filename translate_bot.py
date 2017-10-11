@@ -14,7 +14,10 @@ f.close()
 
 bot = telebot.TeleBot(config["token"])
 db = create_engine(
-    "sqlite:///" + config["db_name"] + ".db?check_same_thread=False",
+    'mysql+mysqldb://{0}:{1}@{2}:{3}/{4}?charset=utf8'.format(
+        config['db_username'], config['db_password'], config['db_host'],
+        config['db_port'], config['db_name']),
+    encoding='utf-8',
     echo=False)
 Base = declarative_base()
 Base.metadata.reflect(db)
@@ -31,9 +34,64 @@ class Data(Base):
     __mapper_args__ = {'primary_key': [__table__.c.osm_id]}
 
 
-@bot.message_handler(commands=['start', 'help'])
+class User(Base):
+    """Class for user table."""
+
+    __table__ = Base.metadata.tables['users']
+    __mapper_args__ = {'primary_key': [__table__.c.user_id]}
+
+
+@bot.message_handler(commands=['start'])
 def send_welcome(message):
     """/start."""
+    user_name = message.from_user.first_name
+    user_id = message.from_user.id
+    if not session.query(exists().where(User.user_id == user_id)).scalar():
+        msg = bot.send_message(message.chat.id, """\
+Dear """ + user_name + """, We appreciate your interest in contributing to OSM.
+
+We keep track of all your contributions, hence need your OSM username,
+Please reply with your OSM username.
+
+If you don't have one, Plesae use the following link and create one
+https://www.openstreetmap.org/user/new
+""")
+        bot.register_next_step_handler(msg, create_user_entry)
+    else:
+        user = session.query(User).filter_by(user_id=user_id).first()
+        bot.send_message(message.chat.id, """\
+Dear """ + user.first_name + """, We appreciate your interest in contributing to OSM.
+Your OSM username is """ + user.osm_username + """
+
+Incase you want to update your OSM username use - /updateusername
+
+Use /contribute to start contributing
+""")
+
+
+def create_user_entry(message):
+    """Creating user entry in users table."""
+    user = User()
+    user.first_name = message.from_user.first_name
+    user.last_name = message.from_user.last_name
+    user.osm_username = message.text
+    user.tlg_username = message.from_user.username
+    user.user_id = message.from_user.id
+    user.verify_count = 0
+    session.add(user)
+    session.commit()
+    bot.send_message(message.chat.id, """\
+Your OSM username *""" + message.text + """* is successfully updated.
+
+Incase you want to update your OSM username use - /updateusername
+
+Use /contribute to start contributing
+""", parse_mode='markdown')
+
+
+@bot.message_handler(commands=['contribute', 'help'])
+def send_instructions(message):
+    """/contribute."""
     bot.send_message(message.chat.id, """\
 I can help you translate contents to Tamil seamlessly.
 
