@@ -59,8 +59,10 @@ https://www.openstreetmap.org/user/new
         bot.register_next_step_handler(msg, create_user_entry)
     else:
         user = session.query(User).filter_by(user_id=user_id).first()
-        bot.send_message(message.chat.id, """\
-Dear """ + user.first_name + """, We appreciate your interest in contributing to OSM.
+        bot.send_message(
+            message.chat.id, """\
+Dear """ + user.first_name +
+            """, We appreciate your interest in contributing to OSM.
 Your OSM username is """ + user.osm_username + """
 
 Incase you want to update your OSM username use - /updateusername
@@ -80,13 +82,40 @@ def create_user_entry(message):
     user.verify_count = 0
     session.add(user)
     session.commit()
-    bot.send_message(message.chat.id, """\
+    bot.send_message(
+        message.chat.id,
+        """\
 Your OSM username *""" + message.text + """* is successfully updated.
 
 Incase you want to update your OSM username use - /updateusername
 
 Use /contribute to start contributing
-""", parse_mode='markdown')
+""",
+        parse_mode='markdown')
+
+
+@bot.message_handler(commands=['updateusername'])
+def update_user(message):
+    """/updateusername."""
+    msg = bot.send_message(
+        message.chat.id,
+        "Please reply with the new OSM username you wish to update.")
+    bot.register_next_step_handler(msg, update_username)
+
+
+def update_username(message):
+    """Update OSM username."""
+    user = session.query(User).filter_by(user_id=message.from_user.id).first()
+    user.osm_username = message.text
+    session.commit()
+    bot.send_message(
+        message.chat.id,
+        """\
+Your OSM username *""" + message.text + """* is successfully updated.
+
+Use /contribute to start contributing
+""",
+        parse_mode='markdown')
 
 
 @bot.message_handler(commands=['contribute', 'help'])
