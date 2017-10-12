@@ -81,6 +81,8 @@ def create_user_entry(message):
     user.user_id = message.from_user.id
     user.verify_count = 0
     user.t_index = 0
+    user.translate_count = 0
+    user.v_index = 0
     session.add(user)
     session.commit()
     bot.send_message(
@@ -137,15 +139,15 @@ def get_verified(message):
     chat_id = message.chat.id
     user = session.query(User).filter_by(user_id=message.from_user.id).first()
     bot.send_chat_action(chat_id, 'typing')
-    result = session.query(Data).filter(Data.verified < 3,
-                                        Data.index > user.t_index,
+    result = session.query(Data).filter(Data.verified < 3, Data.verified > -3,
+                                        Data.index > user.v_index,
                                         Data.translation != None).first()
     text = "Is *%s* a correct translation of *%s*" % (result.translation,
                                                       result.name)
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
     markup.add('Correct', 'Wrong')
     user.verify = result.osm_id
-    user.t_index = result.index
+    user.v_index = result.index
     session.commit()
     msg = bot.send_message(
         chat_id, text, reply_markup=markup, parse_mode='markdown')
@@ -164,7 +166,7 @@ def commit_verify(message):
             session.commit()
         elif message.text == 'Wrong':
             row = session.query(Data).filter_by(osm_id=user.verify).first()
-            row.verified -= 1 if row.verified != 0 else 0
+            row.verified -= 1
             user.verify_count += 1
             session.commit()
         get_verified(message)
@@ -176,8 +178,9 @@ def get_translate(message):
     chat_id = message.chat.id
     user = session.query(User).filter_by(user_id=message.from_user.id).first()
     bot.send_chat_action(chat_id, 'typing')
-    result = session.query(Data).filter(Data.verified == 0,
-                                        Data.index > user.t_index).first()
+    result = session.query(Data).filter(
+        Data.verified <= 0, Data.verified >= -3, Data.index > user.t_index,
+        Data.translator_id == 0).first()
     text = "Translation for *%s*\nIf not sure please reply /skip" % result.name
     user.translate = result.osm_id
     user.t_index = result.index
@@ -195,6 +198,7 @@ def commit_translate(message):
             row = session.query(Data).filter_by(osm_id=user.translate).first()
             row.translation = message.text
             row.translator_id = user.user_id
+            user.translate_count += 1
             session.commit()
         get_translate(message)
 
