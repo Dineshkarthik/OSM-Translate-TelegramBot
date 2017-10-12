@@ -2,7 +2,7 @@
 import os
 import yaml
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, types
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 f = open(os.path.join(THIS_DIR, 'config.yaml'))
@@ -38,6 +38,7 @@ df["verified"] = 0
 df.index = df.index + 1
 df["translator_id"] = 0
 df.loc[df.name == df.translation, 'translation'] = None
+
 if 'translation' in existing_tables:
     max_index = pd.read_sql_query('select max(`index`) from translation',
                                   db).max()
@@ -45,14 +46,33 @@ if 'translation' in existing_tables:
     print("Updating table translation")
 else:
     print("Creating table translation")
-df.to_sql("translation", db, if_exists="append")
+df.to_sql(
+    "translation",
+    db,
+    if_exists="append",
+    dtype={'translation': types.VARCHAR(250)})
+
+if 'translation' not in existing_tables:
+    indexes = [
+        "CREATE UNIQUE INDEX ix_osm_id on translation (osm_id);",
+        "CREATE INDEX ix_get_verified on translation (`index`, verified, translation);",
+        "CREATE INDEX ix_get_translation on translation (`index`, verified, translator_id);"
+    ]
+    for index in indexes:
+        db.execute(index)
 
 if 'users' not in existing_tables:
     user_df = pd.DataFrame(columns=[
         'user_id', 'osm_username', 'tlg_username', 'first_name', 'last_name',
-        'translate', 'verify', 'verify_count', 't_index'
+        'translate', 'verify', 'translate_count', 'verify_count', 't_index',
+        'v_index'
     ])
-    int_columns = ["user_id", "translate", "verify", "verify_count", "t_index"]
+    int_columns = [
+        "user_id", "translate", "verify", "translate_count", "verify_count",
+        "t_index", "v_index"
+    ]
     user_df[int_columns] = user_df[int_columns].astype(int)
-    user_df.to_sql("users", db, if_exists="fail", index=False)
+    user_df.to_sql(
+        "users", db, if_exists="fail", index=False, index_label='user_id')
+    db.execute("CREATE INDEX ix_user_id on users (user_id);")
     print("Created table users")
