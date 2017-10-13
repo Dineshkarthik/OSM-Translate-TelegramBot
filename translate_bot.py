@@ -128,7 +128,8 @@ I can help you translate contents to Tamil seamlessly.
 You can control me by sending these commands:
 
 /translate - To start translating.
-/verify - To verify translations.""")
+/verify - To verify translations.
+/stats - To get your contribution stats.""")
 
 
 @bot.message_handler(commands=['verify'])
