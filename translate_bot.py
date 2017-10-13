@@ -215,4 +215,15 @@ def get_stats(message):
     bot.send_message(chat_id, text, parse_mode='markdown')
 
 
+@bot.message_handler(commands=['remaining'])
+def get_remaining(message):
+    """/remaining."""
+    chat_id = message.chat.id
+    remaining = session.query(func.count(Data.osm_id)).filter(
+        Data.translator_id == 0, Data.verified < 3,
+        Data.verified > -3).scalar()
+    text = "Items to be Verified/Translated - *%s*" % remaining
+    bot.send_message(chat_id, text, parse_mode='markdown')
+
+
 bot.polling(none_stop=True)
