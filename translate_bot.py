@@ -23,6 +23,10 @@ Base = declarative_base()
 Base.metadata.reflect(db)
 Session = sessionmaker(bind=db)
 session = Session()
+available_commands = [
+    '/translate', '/verify', '/contribute', '/stats', '/start',
+    '/updateusername', '/remaining', 'leaderboard'
+]
 
 
 class Data(Base):
@@ -129,7 +133,9 @@ You can control me by sending these commands:
 
 /translate - To start translating.
 /verify - To verify translations.
-/stats - To get your contribution stats.""")
+/stats - To get your contribution stats.
+/remaining - To get count of remaining untranslated and unverified items.
+/leaderboard - To get list of top contributers""")
 
 
 @bot.message_handler(commands=['verify'])
@@ -155,9 +161,7 @@ def get_verified(message):
 
 def commit_verify(message):
     """Commit to DB."""
-    if message.text.lower() not in [
-            '/translate', '/contribute', '/stats', '/start', '/updateusername'
-    ]:
+    if message.text.lower() not in available_commands:
         user = session.query(User).filter_by(
             user_id=message.from_user.id).first()
         if message.text == 'Correct':
@@ -192,8 +196,7 @@ def get_translate(message):
 
 def commit_translate(message):
     """Commit to DB."""
-    if message.text.lower(
-    ) not in ['/verify', '/contribute', '/stats', '/start', '/updateusername']:
+    if message.text.lower() not in available_commands:
         if message.text.lower() != '/skip':
             user = session.query(User).filter_by(
                 user_id=message.from_user.id).first()
@@ -223,6 +226,21 @@ def get_remaining(message):
         Data.translator_id == 0, Data.verified < 3,
         Data.verified > -3).scalar()
     text = "Items to be Verified/Translated - *%s*" % remaining
+    bot.send_message(chat_id, text, parse_mode='markdown')
+
+
+@bot.message_handler(commands=['leaderboard'])
+def get_leaderboard(message):
+    """/leaderboard."""
+    chat_id = message.chat.id
+    translate_users = session.query(User.osm_username).order_by(
+        User.translate_count.desc()).limit(10).all()
+    verify_users = session.query(User.osm_username).order_by(
+        User.verify_count.desc()).limit(10).all()
+    translate_list = '\n'.join([user.osm_username for user in translate_users])
+    verify_list = '\n'.join([user.osm_username for user in verify_users])
+    text = "*Leaderboard*:\nTop Translators:\n%s\n\nTop Verifiers\n%s" % (
+        translate_list, verify_list)
     bot.send_message(chat_id, text, parse_mode='markdown')
 
 
