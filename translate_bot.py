@@ -154,7 +154,9 @@ def get_verified(message):
 
 def commit_verify(message):
     """Commit to DB."""
-    if message.text.lower() != '/translate':
+    if message.text.lower() not in [
+            '/translate', '/contribute', '/stats', '/start', '/updateusername'
+    ]:
         user = session.query(User).filter_by(
             user_id=message.from_user.id).first()
         if message.text == 'Correct':
@@ -189,7 +191,8 @@ def get_translate(message):
 
 def commit_translate(message):
     """Commit to DB."""
-    if message.text.lower() != '/verify':
+    if message.text.lower(
+    ) not in ['/verify', '/contribute', '/stats', '/start', '/updateusername']:
         if message.text.lower() != '/skip':
             user = session.query(User).filter_by(
                 user_id=message.from_user.id).first()
