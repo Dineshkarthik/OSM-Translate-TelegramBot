@@ -24,8 +24,6 @@ Base.metadata.reflect(db)
 Session = sessionmaker(bind=db)
 session = Session()
 
-_dict = {}
-
 
 class Data(Base):
     """Class for translation table."""
@@ -201,6 +199,16 @@ def commit_translate(message):
             user.translate_count += 1
             session.commit()
         get_translate(message)
+
+
+@bot.message_handler(commands=['stats'])
+def get_stats(message):
+    """/stats."""
+    chat_id = message.chat.id
+    user = session.query(User).filter_by(user_id=message.from_user.id).first()
+    text = "Locations Verified - *%s*\nLocations Translated - *%s*" % (
+        user.verify_count, user.translate_count)
+    bot.send_message(chat_id, text, parse_mode='markdown')
 
 
 bot.polling(none_stop=True)
