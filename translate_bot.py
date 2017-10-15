@@ -25,7 +25,7 @@ Session = sessionmaker(bind=db)
 session = Session()
 available_commands = [
     '/translate', '/verify', '/contribute', '/stats', '/start',
-    '/updateusername', '/remaining', 'leaderboard'
+    '/updateusername', '/remaining', '/leaderboard', '/help'
 ]
 
 
@@ -55,7 +55,7 @@ Dear """ + user_name + """, We appreciate your interest in contributing to OSM.
 We keep track of all your contributions, hence need your OSM username,
 Please reply with your OSM username.
 
-If you don't have one, Plesae use the following link and create one
+If you don't have one, Please use the following link and create one
 https://www.openstreetmap.org/user/new
 """)
         bot.register_next_step_handler(msg, create_user_entry)
@@ -135,7 +135,9 @@ You can control me by sending these commands:
 /verify - To verify translations.
 /stats - To get your contribution stats.
 /remaining - To get count of remaining untranslated and unverified items.
-/leaderboard - To get list of top contributers""")
+/leaderboard - To get list of top contributers
+/updateusername - To change your OSM username
+/help - To view this help message""")
 
 
 @bot.message_handler(commands=['verify'])
