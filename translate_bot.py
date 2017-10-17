@@ -24,7 +24,7 @@ Base.metadata.reflect(db)
 Session = sessionmaker(bind=db)
 session = Session()
 available_commands = [
-    '/translate', '/verify', '/contribute', '/stats', '/start',
+    '/translate', '/verify', '/contribute', '/mystats', '/start',
     '/updateusername', '/remaining', '/leaderboard', '/help'
 ]
 
@@ -147,7 +147,7 @@ You can control me by sending these commands:
 
 /translate - To start translating.
 /verify - To verify translations.
-/stats - To get your contribution stats.
+/mystats - To get your contribution stats.
 /remaining - To get count of remaining untranslated and unverified items.
 /leaderboard - To get list of top contributers
 /updateusername - To change your OSM username
@@ -243,9 +243,9 @@ Please use /help to view all available commands""" % message.text)
             get_translate(message)
 
 
-@bot.message_handler(commands=['stats'])
+@bot.message_handler(commands=['mystats'])
 def get_stats(message):
-    """/stats."""
+    """/mystats."""
     chat_id = message.chat.id
     if user_exists(message.from_user.id):
         user = session.query(User).filter_by(
