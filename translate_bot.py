@@ -164,9 +164,9 @@ def get_verified(message):
         bot.send_chat_action(chat_id, 'typing')
         result = session.query(Data).filter(
             Data.verified < 3, Data.verified > -3, Data.index > user.v_index,
-            Data.translation != None).first()
-        text = "Is *%s* a correct translation of *%s*" % (result.translation,
-                                                          result.name)
+            Data.translation != None, Data.translator_id == 0).first()
+        text = "%s - %s - is this correct translation?" % (result.name,
+                                                           result.translation)
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
         markup.add('Correct', 'Wrong')
         user.verify = result.osm_id
