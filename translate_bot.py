@@ -43,12 +43,17 @@ class User(Base):
     __mapper_args__ = {'primary_key': [__table__.c.user_id]}
 
 
+def user_exists(user_id):
+    """Check if user entry exists in user table."""
+    return session.query(exists().where(User.user_id == user_id)).scalar()
+
+
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     """/start."""
     user_name = message.from_user.first_name
     user_id = message.from_user.id
-    if not session.query(exists().where(User.user_id == user_id)).scalar():
+    if not user_exists(user_id):
         msg = bot.send_message(message.chat.id, """\
 Dear """ + user_name + """, We appreciate your interest in contributing to OSM.
 
@@ -75,28 +80,32 @@ Use /contribute to start contributing
 
 def create_user_entry(message):
     """Creating user entry in users table."""
-    user = User()
-    user.first_name = message.from_user.first_name
-    user.last_name = message.from_user.last_name
-    user.osm_username = message.text
-    user.tlg_username = message.from_user.username
-    user.user_id = message.from_user.id
-    user.verify_count = 0
-    user.t_index = 0
-    user.translate_count = 0
-    user.v_index = 0
-    session.add(user)
-    session.commit()
-    bot.send_message(
-        message.chat.id,
-        """\
-Your OSM username *""" + message.text + """* is successfully updated.
+    if message.text.lower() not in available_commands:
+        if message.text.startswith('/'):
+            send_instructions(message)
+        else:
+            user = User()
+            user.first_name = message.from_user.first_name
+            user.last_name = message.from_user.last_name
+            user.osm_username = message.text
+            user.tlg_username = message.from_user.username
+            user.user_id = message.from_user.id
+            user.verify_count = 0
+            user.t_index = 0
+            user.translate_count = 0
+            user.v_index = 0
+            session.add(user)
+            session.commit()
+            bot.send_message(
+                message.chat.id,
+                """\
+        Your OSM username *""" + message.text + """* is successfully updated.
 
-Incase you want to update your OSM username use - /updateusername
+        Incase you want to update your OSM username use - /updateusername
 
-Use /contribute to start contributing
-""",
-        parse_mode='markdown')
+        Use /contribute to start contributing
+        """,
+                parse_mode='markdown')
 
 
 @bot.message_handler(commands=['updateusername'])
@@ -110,17 +119,22 @@ def update_user(message):
 
 def update_username(message):
     """Update OSM username."""
-    user = session.query(User).filter_by(user_id=message.from_user.id).first()
-    user.osm_username = message.text
-    session.commit()
-    bot.send_message(
-        message.chat.id,
-        """\
-Your OSM username *""" + message.text + """* is successfully updated.
+    if message.text.lower() not in available_commands:
+        if message.text.startswith('/'):
+            send_instructions(message)
+        else:
+            user = session.query(User).filter_by(
+                user_id=message.from_user.id).first()
+            user.osm_username = message.text
+            session.commit()
+            bot.send_message(
+                message.chat.id,
+                """\
+    Your OSM username *""" + message.text + """* is successfully updated.
 
-Use /contribute to start contributing
-""",
-        parse_mode='markdown')
+    Use /contribute to start contributing
+    """,
+                parse_mode='markdown')
 
 
 @bot.message_handler(commands=['contribute', 'help'])
@@ -144,21 +158,25 @@ You can control me by sending these commands:
 def get_verified(message):
     """/verify."""
     chat_id = message.chat.id
-    user = session.query(User).filter_by(user_id=message.from_user.id).first()
-    bot.send_chat_action(chat_id, 'typing')
-    result = session.query(Data).filter(Data.verified < 3, Data.verified > -3,
-                                        Data.index > user.v_index,
-                                        Data.translation != None).first()
-    text = "Is *%s* a correct translation of *%s*" % (result.translation,
-                                                      result.name)
-    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
-    markup.add('Correct', 'Wrong')
-    user.verify = result.osm_id
-    user.v_index = result.index
-    session.commit()
-    msg = bot.send_message(
-        chat_id, text, reply_markup=markup, parse_mode='markdown')
-    bot.register_next_step_handler(msg, commit_verify)
+    if user_exists(message.from_user.id):
+        user = session.query(User).filter_by(
+            user_id=message.from_user.id).first()
+        bot.send_chat_action(chat_id, 'typing')
+        result = session.query(Data).filter(
+            Data.verified < 3, Data.verified > -3, Data.index > user.v_index,
+            Data.translation != None).first()
+        text = "Is *%s* a correct translation of *%s*" % (result.translation,
+                                                          result.name)
+        markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
+        markup.add('Correct', 'Wrong')
+        user.verify = result.osm_id
+        user.v_index = result.index
+        session.commit()
+        msg = bot.send_message(
+            chat_id, text, reply_markup=markup, parse_mode='markdown')
+        bot.register_next_step_handler(msg, commit_verify)
+    else:
+        send_welcome(message)
 
 
 def commit_verify(message):
@@ -171,35 +189,50 @@ def commit_verify(message):
             row.verified += 1
             user.verify_count += 1
             session.commit()
+            get_verified(message)
         elif message.text == 'Wrong':
             row = session.query(Data).filter_by(osm_id=user.verify).first()
             row.verified -= 1
             user.verify_count += 1
             session.commit()
-        get_verified(message)
+            get_verified(message)
+        else:
+            bot.send_message(message.chat.id, """\
+Unable to process the command - %s
+Please use /help to view all available commands""" % message.text)
 
 
 @bot.message_handler(commands=['translate'])
 def get_translate(message):
     """/translate."""
     chat_id = message.chat.id
-    user = session.query(User).filter_by(user_id=message.from_user.id).first()
-    bot.send_chat_action(chat_id, 'typing')
-    result = session.query(Data).filter(
-        Data.verified <= 0, Data.verified >= -3, Data.index > user.t_index,
-        Data.translator_id == 0).first()
-    text = "Translation for *%s*\nIf not sure please reply /skip" % result.name
-    user.translate = result.osm_id
-    user.t_index = result.index
-    session.commit()
-    msg = bot.send_message(chat_id, text, parse_mode='markdown')
-    bot.register_next_step_handler(msg, commit_translate)
+    if user_exists(message.from_user.id):
+        user = session.query(User).filter_by(
+            user_id=message.from_user.id).first()
+        bot.send_chat_action(chat_id, 'typing')
+        result = session.query(Data).filter(
+            Data.verified <= 0, Data.verified >= -3, Data.index > user.t_index,
+            Data.translator_id == 0).first()
+        text = "Translation for *%s*\nIf not sure please reply /skip" % result.name
+        user.translate = result.osm_id
+        user.t_index = result.index
+        session.commit()
+        msg = bot.send_message(chat_id, text, parse_mode='markdown')
+        bot.register_next_step_handler(msg, commit_translate)
+    else:
+        send_welcome(message)
 
 
 def commit_translate(message):
     """Commit to DB."""
     if message.text.lower() not in available_commands:
-        if message.text.lower() != '/skip':
+        if message.text.lower() == '/skip':
+            get_translate(message)
+        elif message.text.startswith('/'):
+            bot.send_message(message.chat.id, """\
+Unable to process the command - %s
+Please use /help to view all available commands""" % message.text)
+        else:
             user = session.query(User).filter_by(
                 user_id=message.from_user.id).first()
             row = session.query(Data).filter_by(osm_id=user.translate).first()
@@ -207,17 +240,21 @@ def commit_translate(message):
             row.translator_id = user.user_id
             user.translate_count += 1
             session.commit()
-        get_translate(message)
+            get_translate(message)
 
 
 @bot.message_handler(commands=['stats'])
 def get_stats(message):
     """/stats."""
     chat_id = message.chat.id
-    user = session.query(User).filter_by(user_id=message.from_user.id).first()
-    text = "Locations Verified - *%s*\nLocations Translated - *%s*" % (
-        user.verify_count, user.translate_count)
-    bot.send_message(chat_id, text, parse_mode='markdown')
+    if user_exists(message.from_user.id):
+        user = session.query(User).filter_by(
+            user_id=message.from_user.id).first()
+        text = "Locations Verified - *%s*\nLocations Translated - *%s*" % (
+            user.verify_count, user.translate_count)
+        bot.send_message(chat_id, text, parse_mode='markdown')
+    else:
+        send_welcome(message)
 
 
 @bot.message_handler(commands=['remaining'])
