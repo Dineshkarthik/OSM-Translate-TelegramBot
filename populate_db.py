@@ -65,7 +65,7 @@ if 'users' not in existing_tables:
     user_df = pd.DataFrame(columns=[
         'user_id', 'osm_username', 'tlg_username', 'first_name', 'last_name',
         'translate', 'verify', 'translate_count', 'verify_count', 't_index',
-        'v_index'
+        'v_index', 'password'
     ])
     int_columns = [
         "user_id", "translate", "verify", "translate_count", "verify_count",
