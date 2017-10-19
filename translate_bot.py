@@ -2,6 +2,7 @@
 import os
 import yaml
 import telebot
+import hashlib
 from telebot import types
 from sqlalchemy import *
 from sqlalchemy.orm import *
@@ -25,7 +26,7 @@ Session = sessionmaker(bind=db)
 session = Session()
 available_commands = [
     '/translate', '/verify', '/contribute', '/mystats', '/start',
-    '/updateusername', '/remaining', '/leaderboard', '/help'
+    '/updateusername', '/remaining', '/leaderboard', '/help', '/password'
 ]
 
 
@@ -149,9 +150,10 @@ You can control me by sending these commands:
 /verify - To verify translations.
 /mystats - To get your contribution stats.
 /remaining - To get count of remaining untranslated and unverified items.
-/leaderboard - To get list of top contributers
-/updateusername - To change your OSM username
-/help - To view this help message""")
+/leaderboard - To get list of top contributers.
+/updateusername - To change your OSM username.
+/help - To view this help message.
+/password - To set password for your user account in Stats Webapp.""")
 
 
 @bot.message_handler(commands=['verify'])
@@ -299,6 +301,34 @@ def get_leaderboard(message):
     text = "*Leaderboard*:\nTop Translators:\n%s\n\nTop Verifiers\n%s" % (
         translate_list, verify_list)
     bot.send_message(chat_id, text, parse_mode='markdown')
+
+
+@bot.message_handler(commands=['password'])
+def get_password(message):
+    """/password."""
+    msg = bot.send_message(
+        message.chat.id,
+        "Please reply with your descired password for Stats Webapp.")
+    bot.register_next_step_handler(msg, update_username)
+
+
+def update_password(message):
+    """Update password to DB"""
+    if message.text.lower() not in available_commands:
+        if message.text.startswith('/'):
+            send_instructions(message)
+        else:
+            user = session.query(User).filter_by(
+                user_id=message.from_user.id).first()
+            user.password = hashlib.sha1(
+                bytes(
+                    message.text, encoding='utf-8')).hexdigest()
+            session.commit()
+            bot.send_message(message.chat.id, """\
+Password  updated successfully.
+
+Stats Webapp can be found in the following URL:
+http://update_your_url.here""")
 
 
 bot.polling(none_stop=True)
