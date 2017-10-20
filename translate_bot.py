@@ -166,16 +166,23 @@ def get_verified(message):
             Data.verified.in_(
                 ('-1', '-2', '0', '1', '2')), Data.index > user.v_index,
             Data.translation != None, Data.translator_id == 0).first()
-        text = "%s - %s - is this correct translation?" % (result.name,
-                                                           result.translation)
-        markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
-        markup.add('Correct', 'Wrong')
-        user.verify = result.osm_id
-        user.v_index = result.index
-        session.commit()
-        msg = bot.send_message(
-            chat_id, text, reply_markup=markup, parse_mode='markdown')
-        bot.register_next_step_handler(msg, commit_verify)
+        if result is None:
+            bot.send_message(
+                chat_id,
+                "Dear %s currently there are no items available for you to verify"
+                % user.first_name)
+            send_instructions(message)
+        else:
+            text = "%s - %s - is this correct translation?" % (
+                result.name, result.translation)
+            markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
+            markup.add('Correct', 'Wrong')
+            user.verify = result.osm_id
+            user.v_index = result.index
+            session.commit()
+            msg = bot.send_message(
+                chat_id, text, reply_markup=markup, parse_mode='markdown')
+            bot.register_next_step_handler(msg, commit_verify)
     else:
         send_welcome(message)
 
@@ -214,12 +221,19 @@ def get_translate(message):
         result = session.query(Data).filter(
             Data.verified.in_(('-3', '0')), Data.index > user.t_index,
             Data.translator_id == 0).first()
-        text = "Translation for *%s*\nIf not sure please reply /skip" % result.name
-        user.translate = result.osm_id
-        user.t_index = result.index
-        session.commit()
-        msg = bot.send_message(chat_id, text, parse_mode='markdown')
-        bot.register_next_step_handler(msg, commit_translate)
+        if result is None:
+            bot.send_message(
+                chat_id,
+                "Dear %s currently there are no items available for you to translate"
+                % user.first_name)
+            send_instructions(message)
+        else:
+            text = "Translation for *%s*\nIf not sure please reply /skip" % result.name
+            user.translate = result.osm_id
+            user.t_index = result.index
+            session.commit()
+            msg = bot.send_message(chat_id, text, parse_mode='markdown')
+            bot.register_next_step_handler(msg, commit_translate)
     else:
         send_welcome(message)
 
