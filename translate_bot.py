@@ -163,7 +163,8 @@ def get_verified(message):
             user_id=message.from_user.id).first()
         bot.send_chat_action(chat_id, 'typing')
         result = session.query(Data).filter(
-            Data.verified < 3, Data.verified > -3, Data.index > user.v_index,
+            Data.verified.in_(
+                ('-1', '-2', '0', '1', '2')), Data.index > user.v_index,
             Data.translation != None, Data.translator_id == 0).first()
         text = "%s - %s - is this correct translation?" % (result.name,
                                                            result.translation)
@@ -211,7 +212,7 @@ def get_translate(message):
             user_id=message.from_user.id).first()
         bot.send_chat_action(chat_id, 'typing')
         result = session.query(Data).filter(
-            Data.verified <= 0, Data.verified >= -3, Data.index > user.t_index,
+            Data.verified.in_(('-3', '0')), Data.index > user.t_index,
             Data.translator_id == 0).first()
         text = "Translation for *%s*\nIf not sure please reply /skip" % result.name
         user.translate = result.osm_id
@@ -261,10 +262,13 @@ def get_stats(message):
 def get_remaining(message):
     """/remaining."""
     chat_id = message.chat.id
-    remaining = session.query(func.count(Data.osm_id)).filter(
-        Data.translator_id == 0, Data.verified < 3,
-        Data.verified > -3).scalar()
-    text = "Items to be Verified/Translated - *%s*" % remaining
+    remaining_verify = session.query(func.count(Data.osm_id)).filter(
+        Data.verified.in_(('-1', '-2', '0', '1', '2')),
+        Data.translation != None, Data.translator_id == 0).scalar()
+    remaining_translate = session.query(func.count(Data.osm_id)).filter(
+        Data.verified.in_(('-3', '0')), Data.translator_id == 0).scalar()
+    text = "Items to be Verified - *%s*\nItems to be Translated - *%s*" % (
+        remaining_verify, remaining_translate)
     bot.send_message(chat_id, text, parse_mode='markdown')
 
 
