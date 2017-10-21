@@ -1,12 +1,13 @@
 """Flask web app for visualizing OSM-Translation stats."""
+import os
+import hashlib
+from optparse import OptionParser
 from flask import Flask, Response, redirect, url_for, request, session, abort
 from flask.ext.login import LoginManager, UserMixin, \
                                 login_required, login_user, logout_user
 
 app = Flask(__name__)
-
-# config
-app.config.update(DEBUG=True, SECRET_KEY='secret_xxx')
+app.secret_key = hashlib.sha1(os.urandom(128)).hexdigest()
 
 # flask-login
 login_manager = LoginManager()
@@ -80,4 +81,12 @@ def load_user(userid):
 
 
 if __name__ == "__main__":
-    app.run()
+    parser = OptionParser()
+    parser.add_option(
+        "-p",
+        "--port",
+        dest="port",
+        help="Port on which the app will run",
+        default=5000)
+    (options, args) = parser.parse_args()
+    app.run(host='0.0.0.0', debug=True, port=int(options.port))
