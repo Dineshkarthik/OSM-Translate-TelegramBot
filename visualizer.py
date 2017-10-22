@@ -48,7 +48,6 @@ class User(Base):
 
     __table__ = Base.metadata.tables['users']
     __mapper_args__ = {'primary_key': [__table__.c.user_id]}
-    authenticated = db.Column(db.Boolean, default=False)
 
     def is_active(self):
         """True, as all users are active."""
