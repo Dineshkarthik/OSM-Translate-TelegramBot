@@ -1,9 +1,13 @@
 """Flask web app for visualizing OSM-Translation stats."""
 import os
+import yaml
 import hashlib
 from optparse import OptionParser
+from sqlalchemy import *
+from sqlalchemy.orm import *
+from sqlalchemy.ext.declarative import *
 from flask import Flask, Response, redirect, url_for, request, session, abort
-from flask.ext.login import LoginManager, UserMixin, \
+from flask_login import LoginManager, UserMixin, \
                                 login_required, login_user, logout_user
 
 app = Flask(__name__)
@@ -15,26 +19,60 @@ login_manager.init_app(app)
 login_manager.login_view = "login"
 
 
-# silly user model
-class User(UserMixin):
-    def __init__(self, id):
-        self.id = id
-        self.name = "user" + str(id)
-        self.password = self.name + "_secret"
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+f = open(os.path.join(THIS_DIR, 'config.yaml'))
+config = yaml.safe_load(f)
+f.close()
 
-    def __repr__(self):
-        return "%d/%s/%s" % (self.id, self.name, self.password)
+db = create_engine(
+    'mysql+mysqldb://{0}:{1}@{2}:{3}/{4}?charset=utf8'.format(
+        config['db_username'], config['db_password'], config['db_host'],
+        config['db_port'], config['db_name']),
+    encoding='utf-8',
+    echo=False)
+Base = declarative_base()
+Base.metadata.reflect(db)
+Session = sessionmaker(bind=db)
+session = Session()
 
 
-# create some users with ids 1 to 20
-users = [User(id) for id in range(1, 21)]
+class Data(Base):
+    """Class for translation table."""
+
+    __table__ = Base.metadata.tables['translation']
+    __mapper_args__ = {'primary_key': [__table__.c.osm_id]}
+
+
+class User(Base):
+    """Class for user table."""
+
+    __table__ = Base.metadata.tables['users']
+    __mapper_args__ = {'primary_key': [__table__.c.user_id]}
+    authenticated = db.Column(db.Boolean, default=False)
+
+    def is_active(self):
+        """True, as all users are active."""
+        return True
+
+    def get_id(self):
+        """Return the email address to satisfy Flask-Login's requirements."""
+        return self.osm_username
+
+    def is_authenticated(self):
+        """Return True if the user is authenticated."""
+        return self.authenticated
+
+    def is_anonymous(self):
+        """False, as anonymous users aren't supported."""
+        return False
+
 
 
 # some protected url
 @app.route('/')
 @login_required
 def home():
-    return Response("Hello World!")
+    return Response(user)
 
 
 # somewhere to login
@@ -42,10 +80,9 @@ def home():
 def login():
     if request.method == 'POST':
         username = request.form['username']
-        password = request.form['password']
-        if password == username + "_secret":
-            id = username.split('user')[1]
-            user = User(id)
+        password = hashlib.sha1(bytes(request.form['password'], encoding='utf-8')).hexdigest()
+        user = session.query(User).filter_by(osm_username=username).first()
+        if password == user.password:
             login_user(user)
             return redirect(request.args.get("next"))
         else:
