@@ -44,6 +44,9 @@ $ pip install -r requirements.txt
  - db_password - Password to connect to DB.
  - db_host - Hostname of the DB, if using local database use `localhost`
  - db_port - Port to connect to db, MySQL default port is 3306
+ - export_type - For exporting data from DB
+    - batch - To export data which is not exported already.
+    - all - To export all available data which are wither verified or translated.
 
 ## Execution
 ```sh
