@@ -19,4 +19,4 @@ db = create_engine(
 
 df = pd.read_sql_table('translation', db)
 df = df[(df["translator_id"] != 0) | (df["verified"] == 3)]
-df.to_csv(config["db_name"] + ".csv", index=False)
+df.to_csv(config["db_name"] + ".csv", index=False, sep="~")

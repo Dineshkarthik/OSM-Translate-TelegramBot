@@ -33,7 +33,7 @@ db = create_engine(
 existing_tables = db.execute("SHOW TABLES;")
 existing_tables = [d[0] for d in existing_tables]
 
-df = pd.read_csv(config["input_csv"])
+df = pd.read_csv(config["input_csv"], sep="~")
 df["verified"] = 0
 df.index = df.index + 1
 df["translator_id"] = 0
