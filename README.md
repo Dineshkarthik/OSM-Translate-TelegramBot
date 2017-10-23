@@ -31,6 +31,7 @@ $ pip install -r requirements.txt
      db_password: 'MYSQL_PASSWORD'
      db_host: 'localhost'
      db_port: 3306
+     export_type: 'batch'
      
 
  - token  - Your Telegram Bot API Token, to get the token follow the instructions available [here](https://core.telegram.org/bots#6-botfather)
