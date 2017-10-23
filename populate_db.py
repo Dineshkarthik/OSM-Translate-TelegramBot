@@ -37,6 +37,7 @@ df = pd.read_csv(config["input_csv"], sep="~")
 df["verified"] = 0
 df.index = df.index + 1
 df["translator_id"] = 0
+df["is_exported"] = 0
 df.loc[df.name == df.translation, 'translation'] = None
 
 if 'translation' in existing_tables:

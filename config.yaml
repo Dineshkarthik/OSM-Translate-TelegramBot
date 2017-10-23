@@ -5,3 +5,4 @@ db_username: 'MYSQL_USER_NAME'
 db_password: 'MYSQL_PASSWORD'
 db_host: 'localhost'
 db_port: 3306
+export_type: 'batch'
