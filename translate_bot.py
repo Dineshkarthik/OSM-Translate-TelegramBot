@@ -294,10 +294,12 @@ def get_leaderboard(message):
         User.translate_count.desc()).limit(10).all()
     verify_users = session.query(User.osm_username).order_by(
         User.verify_count.desc()).limit(10).all()
+    user_count = session.query(func.count(User.user_id)).filter(
+        or_(User.translate_count > 0, User.verify_count > 0)).scalar()
     translate_list = '\n'.join([user.osm_username for user in translate_users])
     verify_list = '\n'.join([user.osm_username for user in verify_users])
-    text = "*Leaderboard*:\nTop Translators:\n%s\n\nTop Verifiers\n%s" % (
-        translate_list, verify_list)
+    text = "*Contributors - %s*\n*Leaderboard*:\nTop Translators:\n%s\n\nTop Verifiers\n%s" % (
+        user_count, translate_list, verify_list)
     bot.send_message(chat_id, text, parse_mode='markdown')
 
 
