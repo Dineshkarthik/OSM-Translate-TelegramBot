@@ -2,7 +2,9 @@
 import os
 import yaml
 import pandas as pd
-from sqlalchemy import create_engine, types
+from sqlalchemy import create_engine, types, or_
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.ext.declarative import declarative_base
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 f = open(os.path.join(THIS_DIR, 'config.yaml'))
@@ -29,6 +31,10 @@ db = create_engine(
         config['db_port'], database),
     encoding='utf-8',
     echo=False)
+Base = declarative_base()
+Base.metadata.reflect(db)
+Session = sessionmaker(bind=db)
+session = Session()
 
 existing_tables = db.execute("SHOW TABLES;")
 existing_tables = [d[0] for d in existing_tables]
@@ -44,10 +50,28 @@ def import_data():
     df.loc[df.name == df.translation, 'translation'] = None
 
     if 'translation' in existing_tables:
+
+        class Data(Base):
+            """Class for translation table."""
+
+            __table__ = Base.metadata.tables['translation']
+            __mapper_args__ = {'primary_key': [__table__.c.osm_id]}
+
+        def check_exists(row):
+            """Check if a entry exists in db."""
+            r = session.query(Data).filter(
+                Data.name == row["name"],
+                or_(Data.verified == 3, Data.translator_id != 0)).first()
+            if r:
+                row["translation"] = r.translation
+                row["verified"] = 3
+            return row
+
         max_index = pd.read_sql_query('select max(`index`) from translation',
                                       db).max()
         df.index = df.index + max_index[0]
         print("Updating table translation")
+        df = df.apply(check_exists, axis=1)
     else:
         print("Creating table translation")
     df.to_sql(
@@ -88,6 +112,7 @@ def add_admin():
         query = "UPDATE `users` SET `is_admin`='1' WHERE `tlg_username`='" + admin + "';"
         db.execute(query)
     print("Admin roles updated...!")
+
 
 if __name__ == "__main__":
     import_data()
