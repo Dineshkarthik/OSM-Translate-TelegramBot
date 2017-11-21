@@ -174,10 +174,10 @@ def get_verified(message):
                 % user.first_name)
             send_instructions(message)
         else:
-            text = "%s - %s - is this correct translation?" % (
+            text = "%s - %s\nஇது சரியான தமிழாக்கமா?" % (
                 result.name, result.translation)
             markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
-            markup.add('Correct', 'Wrong')
+            markup.add('சரி', 'தவறு')
             user.verify = result.osm_id
             user.v_index = result.index
             session.commit()
@@ -193,13 +193,13 @@ def commit_verify(message):
     if message.text.lower() not in available_commands:
         user = session.query(User).filter_by(
             user_id=message.from_user.id).first()
-        if message.text == 'Correct':
+        if message.text == 'சரி':
             row = session.query(Data).filter_by(osm_id=user.verify).first()
             row.verified += 1
             user.verify_count += 1
             session.commit()
             get_verified(message)
-        elif message.text == 'Wrong':
+        elif message.text == 'தவறு':
             row = session.query(Data).filter_by(osm_id=user.verify).first()
             row.verified -= 1
             user.verify_count += 1
