@@ -94,6 +94,7 @@ def create_user_entry(message):
             user.t_index = 0
             user.translate_count = 0
             user.v_index = 0
+            user.is_admin = 0
             session.add(user)
             session.commit()
             bot.send_message(
@@ -302,5 +303,32 @@ def get_leaderboard(message):
         user_count, translate_list, verify_list)
     bot.send_message(chat_id, text, parse_mode='markdown')
 
+
+@bot.message_handler(commands=['broadcast'])
+def broadcast(message):
+    """/broadcast."""
+    chat_id = message.chat.id
+    if user_exists(message.from_user.id):
+        user = session.query(User).filter_by(
+            user_id=message.from_user.id).first()
+        if user.is_admin == 1:
+            text = "Dear Admin, Please reply the message need to be broadcasted"
+            msg = bot.send_message(chat_id, text, parse_mode='markdown')
+            bot.register_next_step_handler(msg, send_to_all)
+        else:
+            text = """You don't have admin privilege to broadcast.
+Please contact administrator for access."""
+            bot.send_message(chat_id, text, parse_mode='markdown')
+    else:
+        send_welcome(message)
+
+
+def send_to_all(message):
+    """Broadcast a message to all users."""
+    chat_id = message.chat.id
+    text = "Broadcast - Successful."
+    for user in session.query(User.user_id).all():
+        bot.send_message(user[0], message.text, parse_mode='markdown')
+    bot.send_message(chat_id, text, parse_mode='markdown')
 
 bot.polling(none_stop=True)
