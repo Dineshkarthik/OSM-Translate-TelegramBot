@@ -328,7 +328,7 @@ def send_to_all(message):
     chat_id = message.chat.id
     text = "Broadcast - Successful."
     for user in session.query(User.user_id).all():
-        bot.send_message(user[0], message.text, parse_mode='markdown')
+        bot.send_message(user[0], message.text)
     bot.send_message(chat_id, text, parse_mode='markdown')
 
 bot.polling(none_stop=True)
