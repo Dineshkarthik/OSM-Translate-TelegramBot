@@ -6,3 +6,4 @@ db_password: 'MYSQL_PASSWORD'
 db_host: 'localhost'
 db_port: 3306
 export_type: 'batch'
+bot_admin: ['admin1_telegram_username', 'admin2_telegram_username']

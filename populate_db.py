@@ -33,47 +33,62 @@ db = create_engine(
 existing_tables = db.execute("SHOW TABLES;")
 existing_tables = [d[0] for d in existing_tables]
 
-df = pd.read_csv(config["input_csv"], sep="~")
-df["verified"] = 0
-df.index = df.index + 1
-df["translator_id"] = 0
-df["is_exported"] = 0
-df.loc[df.name == df.translation, 'translation'] = None
 
-if 'translation' in existing_tables:
-    max_index = pd.read_sql_query('select max(`index`) from translation',
-                                  db).max()
-    df.index = df.index + max_index[0]
-    print("Updating table translation")
-else:
-    print("Creating table translation")
-df.to_sql(
-    "translation",
-    db,
-    if_exists="append",
-    dtype={'translation': types.VARCHAR(250)})
+def import_data():
+    """Import data to db."""
+    df = pd.read_csv(config["input_csv"], sep="~")
+    df["verified"] = 0
+    df.index = df.index + 1
+    df["translator_id"] = 0
+    df["is_exported"] = 0
+    df.loc[df.name == df.translation, 'translation'] = None
 
-if 'translation' not in existing_tables:
-    indexes = [
-        "CREATE UNIQUE INDEX ix_osm_id on translation (osm_id);",
-        "CREATE INDEX ix_get_verified on translation (`index`, verified, translation);",
-        "CREATE INDEX ix_get_translation on translation (`index`, verified, translator_id);"
-    ]
-    for index in indexes:
-        db.execute(index)
+    if 'translation' in existing_tables:
+        max_index = pd.read_sql_query('select max(`index`) from translation',
+                                      db).max()
+        df.index = df.index + max_index[0]
+        print("Updating table translation")
+    else:
+        print("Creating table translation")
+    df.to_sql(
+        "translation",
+        db,
+        if_exists="append",
+        dtype={'translation': types.VARCHAR(250)})
 
-if 'users' not in existing_tables:
-    user_df = pd.DataFrame(columns=[
-        'user_id', 'osm_username', 'tlg_username', 'first_name', 'last_name',
-        'translate', 'verify', 'translate_count', 'verify_count', 't_index',
-        'v_index'
-    ])
-    int_columns = [
-        "user_id", "translate", "verify", "translate_count", "verify_count",
-        "t_index", "v_index"
-    ]
-    user_df[int_columns] = user_df[int_columns].astype(int)
-    user_df.to_sql(
-        "users", db, if_exists="fail", index=False, index_label='user_id')
-    db.execute("CREATE INDEX ix_user_id on users (user_id);")
-    print("Created table users")
+    if 'translation' not in existing_tables:
+        indexes = [
+            "CREATE UNIQUE INDEX ix_osm_id on translation (osm_id);",
+            "CREATE INDEX ix_get_verified on translation (`index`, verified, translation);",
+            "CREATE INDEX ix_get_translation on translation (`index`, verified, translator_id);"
+        ]
+        for index in indexes:
+            db.execute(index)
+
+    if 'users' not in existing_tables:
+        user_df = pd.DataFrame(columns=[
+            'user_id', 'osm_username', 'tlg_username', 'first_name',
+            'last_name', 'translate', 'verify', 'translate_count',
+            'verify_count', 't_index', 'v_index', 'is_admin'
+        ])
+        int_columns = [
+            "user_id", "translate", "verify", "translate_count",
+            "verify_count", "t_index", "v_index", "is_admin"
+        ]
+        user_df[int_columns] = user_df[int_columns].astype(int)
+        user_df.to_sql(
+            "users", db, if_exists="fail", index=False, index_label='user_id')
+        db.execute("CREATE INDEX ix_user_id on users (user_id);")
+        print("Created table users")
+
+
+def add_admin():
+    """Function to update admin roles."""
+    for admin in config["bot_admin"]:
+        query = "UPDATE `users` SET `is_admin`='1' WHERE `tlg_username`='" + admin + "';"
+        db.execute(query)
+    print("Admin roles updated...!")
+
+if __name__ == "__main__":
+    import_data()
+    add_admin()
