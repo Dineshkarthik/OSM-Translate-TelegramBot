@@ -32,6 +32,7 @@ $ pip install -r requirements.txt
      db_host: 'localhost'
      db_port: 3306
      export_type: 'batch'
+     bot_admin: ['admin1_telegram_username', admin2_telegram_username']
      
 
  - token  - Your Telegram Bot API Token, to get the token follow the instructions available [here](https://core.telegram.org/bots#6-botfather)
@@ -48,6 +49,7 @@ $ pip install -r requirements.txt
  - export_type - For exporting data from DB
     - batch - To export data which is not exported already.
     - all - To export all available data which are wither verified or translated.
+ - bot_admin - Telegram username of the user to be given Admin access.
 
 ## Execution
 ```sh
@@ -55,7 +57,8 @@ $ python populated_db.py
 $ python translate_bot.py
 $ python export_db.py
 ```
-* Running `populated_db.py` will generate a MySQL DB if not already created and will seed it with data from the input csv file.
+* Running `populated_db.py` will generate a MySQL DB if not already created and will seed it with data from the input csv file and to update admin roles to existing users.
+* Run `python -c 'from populate_db import add_admin; add_admin()'`to update admin roles alone without importing data to DB.
 * Running `translate_bot.py` will start the Telegram Bot.  
 * Runnign `export_db.py` will export translated data available in DB to a CSV file.
 
