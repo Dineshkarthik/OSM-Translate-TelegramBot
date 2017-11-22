@@ -153,6 +153,17 @@ You can control me by sending these commands:
 /leaderboard - To get list of top contributers
 /updateusername - To change your OSM username
 /help - To view this help message""")
+    if user_exists(message.from_user.id):
+        user = session.query(User).filter_by(
+            user_id=message.from_user.id).first()
+        if user.is_admin == 1:
+            bot.send_message(
+                message.chat.id,
+                """\
+*Admin Privilege:*
+
+/broadcast - To send message to all users.""",
+                parse_mode='markdown')
 
 
 @bot.message_handler(commands=['verify'])
@@ -174,8 +185,8 @@ def get_verified(message):
                 % user.first_name)
             send_instructions(message)
         else:
-            text = "%s - %s\nஇது சரியான தமிழாக்கமா?" % (
-                result.name, result.translation)
+            text = "%s - %s\nஇது சரியான தமிழாக்கமா?" % (result.name,
+                                                        result.translation)
             markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
             markup.add('சரி', 'தவறு')
             user.verify = result.osm_id
@@ -331,5 +342,6 @@ def send_to_all(message):
         for user in session.query(User.user_id).all():
             bot.send_message(user[0], message.text)
         bot.send_message(chat_id, text, parse_mode='markdown')
+
 
 bot.polling(none_stop=True)
