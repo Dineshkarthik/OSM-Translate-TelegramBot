@@ -25,7 +25,7 @@ Session = sessionmaker(bind=db)
 session = Session()
 available_commands = [
     '/translate', '/verify', '/contribute', '/mystats', '/start',
-    '/updateusername', '/remaining', '/leaderboard', '/help'
+    '/updateusername', '/remaining', '/leaderboard', '/help', '/broadcast'
 ]
 
 
@@ -325,10 +325,11 @@ Please contact administrator for access."""
 
 def send_to_all(message):
     """Broadcast a message to all users."""
-    chat_id = message.chat.id
-    text = "Broadcast - Successful."
-    for user in session.query(User.user_id).all():
-        bot.send_message(user[0], message.text)
-    bot.send_message(chat_id, text, parse_mode='markdown')
+    if message.text.lower() not in available_commands:
+        chat_id = message.chat.id
+        text = "Broadcast - Successful."
+        for user in session.query(User.user_id).all():
+            bot.send_message(user[0], message.text)
+        bot.send_message(chat_id, text, parse_mode='markdown')
 
 bot.polling(none_stop=True)
